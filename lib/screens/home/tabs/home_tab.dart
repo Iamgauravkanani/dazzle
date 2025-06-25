@@ -1,4 +1,6 @@
-import 'package:dazzle_app/screens/home/home_controller.dart';
+import 'package:dazzle_app/controllers/home_controller.dart';
+import 'package:dazzle_app/models/product_model.dart';
+import 'package:dazzle_app/screens/new_and_trending/new_arrival_trending.dart';
 import 'package:dazzle_app/screens/product_detail/product_detail_screen.dart';
 import 'package:dazzle_app/utils/theme.dart';
 import 'package:flutter/cupertino.dart';
@@ -20,68 +22,39 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  String selectedCategory = 'All';
-  HomeController homeController = Get.put(HomeController());
+  final HomeController homeController = Get.find<HomeController>();
 
-  // Dummy product data
-  final List<Map<String, dynamic>> dummyProducts = [
-    {
-      'id': '1',
-      'title': 'Floral Printed Saree',
-      'price': 1299.00,
-      'pcs': 1,
-      'imageUrl': 'https://via.placeholder.com/300?text=Saree',
-      'category': 'Sarees',
-    },
-    {
-      'id': '2',
-      'title': 'Designer Lehenga Choli',
-      'price': 5999.00,
-      'pcs': 3,
-      'imageUrl': 'https://via.placeholder.com/300?text=Lehenga',
-      'category': 'Lehenga Choli',
-    },
-    {
-      'id': '3',
-      'title': 'Cotton Salwar Suit',
-      'price': 1999.00,
-      'pcs': 2,
-      'imageUrl': 'https://via.placeholder.com/300?text=Salwar',
-      'category': 'Salwar Suits',
-    },
-    {
-      'id': '4',
-      'title': 'Embroidered Kurti',
-      'price': 899.00,
-      'pcs': 1,
-      'imageUrl': 'https://via.placeholder.com/300?text=Kurti',
-      'category': 'Kurtis',
-    },
-    {
-      'id': '5',
-      'title': 'Party Wear Dress',
-      'price': 2499.00,
-      'pcs': 1,
-      'imageUrl': 'https://via.placeholder.com/300?text=Dress',
-      'category': 'Dresses',
-    },
-    {
-      'id': '6',
-      'title': 'Silk Saree',
-      'price': 3599.00,
-      'pcs': 1,
-      'imageUrl': 'https://via.placeholder.com/300?text=Silk+Saree',
-      'category': 'Sarees',
-    },
-  ];
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
+        !_scrollController.position.outOfRange &&
+        !homeController.isLoadingMore.value) {
+      homeController.loadMoreProducts();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      controller: _scrollController,
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 24.h),
+          SizedBox(height: 8.h),
           _buildBannerSlider(),
           SizedBox(height: 12.h),
           _wpCommunityBTN(),
@@ -90,7 +63,7 @@ class _HomeTabState extends State<HomeTab> {
             padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Row(
               children: [
-                Expanded(child: _buildTrendingNewArrivalBanner("Trending")),
+                Expanded(child: _buildTrendingNewArrivalBanner("Trending Now")),
                 SizedBox(width: 16.w),
                 Expanded(child: _buildTrendingNewArrivalBanner("New Arrival")),
               ],
@@ -100,6 +73,15 @@ class _HomeTabState extends State<HomeTab> {
           _buildCategoryTabs(),
           SizedBox(height: 16.h),
           _buildProductGrid(),
+          Obx(() {
+            if (homeController.isLoadingMore.value) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.0),
+                child: Center(child: CupertinoActivityIndicator()),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
         ],
       ),
     );
@@ -112,14 +94,27 @@ class _HomeTabState extends State<HomeTab> {
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.wpColor),
           onPressed: () {
-            launchUrl(Uri.parse("https://chat.whatsapp.com/DcmnzTm3xTIJTHzREOYKQs"));
+            launchUrl(Uri.parse("https://chat.whatsapp.com/DcmnzTm3xTIJTHzREOYKQs")).catchError((e) {
+              print('Error launching URL: $e');
+            });
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SvgPicture.asset("assets/svg/wlogo2.svg", color: Colors.white, height: 25, width: 25),
-              SizedBox(width: 5),
-              Text("Join Our WhatsApp Community", style: GoogleFonts.poppins(fontSize: 16)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  "Join Our WhatsApp Community",
+                  style: GoogleFonts.poppins(
+                    fontSize: MediaQuery.of(context).size.width * 0.035,
+                    height: 1.2, // Adjust line height for better alignment
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis, // Ensures text stays in a single line
+                  maxLines: 1, // Restricts text to one line
+                ),
+              ),
             ],
           ),
         ),
@@ -130,295 +125,367 @@ class _HomeTabState extends State<HomeTab> {
   Widget _buildBannerSlider() {
     return Obx(() {
       if (homeController.isLoadingBanners.value) {
-        return Container(
-          height: 200.h,
-          margin: EdgeInsets.symmetric(horizontal: 5.w),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(15.r),
-          ),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15.r),
-              ),
-            ),
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            height: 200.h,
+            margin: EdgeInsets.symmetric(horizontal: 5.w),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15.r)),
           ),
         );
       }
 
       if (homeController.bannerImages.isEmpty) {
-        return Container(
+        return Container(height: 200.h, child: Center(child: Text('No banners available')));
+      }
+
+      return CarouselSlider.builder(
+        itemCount: homeController.bannerImages.length,
+        itemBuilder: (context, index, realIndex) {
+          final imageUrl = homeController.bannerImages[index];
+          return Container(
+            width: double.infinity,
+            margin: EdgeInsets.symmetric(horizontal: 5.w),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15.r),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder:
+                    (context, url) => Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(color: Colors.white),
+                    ),
+                errorWidget:
+                    (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.error)),
+              ),
+            ),
+          );
+        },
+        options: CarouselOptions(
           height: 200.h,
-          child: Center(child: Text('No banners available')),
+          autoPlay: homeController.bannerImages.length > 1,
+          enlargeCenterPage: true,
+          enableInfiniteScroll: homeController.bannerImages.length > 1,
+          viewportFraction: 0.95,
+        ),
+      );
+    });
+  }
+
+  Widget _buildTrendingNewArrivalBanner(String label) {
+    return Obx(() {
+      final bool isLoading = homeController.isLoadingPromoBanners.value;
+      final String imageUrl =
+          (label == "Trending Now") ? homeController.trendingImageUrl.value : homeController.newArrivalImageUrl.value;
+
+      if (isLoading) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            height: 250.h,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12.r)),
+          ),
         );
       }
 
-      return CarouselSlider(
-        options: CarouselOptions(
-          height: 200.h,
-          autoPlay: true,
-          enlargeCenterPage: true,
-          aspectRatio: 16 / 9,
-          autoPlayCurve: Curves.fastOutSlowIn,
-          enableInfiniteScroll: true,
-          autoPlayAnimationDuration: const Duration(milliseconds: 800),
-          viewportFraction: 0.95,
-        ),
-        items: homeController.bannerImages.map((imageUrl) {
-          return Builder(
-            builder: (BuildContext context) {
-              return Container(
-                width: double.infinity,
-                margin: EdgeInsets.symmetric(horizontal: 5.w),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(15.r),
+      if (imageUrl.isEmpty) {
+        return Container(
+          height: 250.h,
+          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12.r)),
+          child: Center(child: Icon(Icons.image_not_supported_outlined, color: Colors.grey.shade500, size: 40)),
+        );
+      }
+
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => TrendingAndArrivalScreen(filterType: label)));
+        },
+        child: Container(
+          height: 250.h,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
+          ),
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12.r),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (context, url) => Center(child: CupertinoActivityIndicator()),
+                  errorWidget: (context, url, error) => Center(child: Icon(Icons.error)),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15.r),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    placeholder: (context, url) => Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        color: Colors.white,
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.error),
-                    ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.r),
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                    stops: const [0.0, 0.5],
                   ),
                 ),
-              );
-            },
-          );
-        }).toList(),
+              ),
+              Positioned(
+                left: 16.w,
+                bottom: 16.h,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 4, offset: const Offset(0, 2))],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     });
   }
 
   Widget _buildCategoryTabs() {
-    final categories = ['All', 'Sarees', 'Lehenga Choli', 'Salwar Suits', 'Kurtis', 'Dresses'];
+    return Obx(() {
+      if (homeController.isLoadingCategories.value) {
+        return Container(
+          height: 40.h,
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 5,
+              itemBuilder:
+                  (context, index) => Container(
+                    width: 80.w,
+                    margin: EdgeInsets.only(right: 12.w),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20.r)),
+                  ),
+            ),
+          ),
+        );
+      }
 
-    return Container(
-      height: 40.h,
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children:
-            categories.map((category) {
-              return _buildCategoryTab(category);
-            }).toList(),
-      ),
-    );
+      if (homeController.categories.isEmpty) {
+        return SizedBox.shrink(); // Don't show anything if no categories
+      }
+
+      return Container(
+        height: 40.h,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          itemCount: homeController.categories.length,
+          itemBuilder: (context, index) {
+            final category = homeController.categories[index];
+            return _buildCategoryTab(category);
+          },
+        ),
+      );
+    });
   }
 
   Widget _buildCategoryTab(String category) {
-    final isSelected = selectedCategory == category;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedCategory = category;
-        });
-      },
-      child: Container(
-        margin: EdgeInsets.only(right: 12.w),
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: isSelected ? Theme.of(context).primaryColor : Colors.grey),
-        ),
-        child: Center(
-          child: Text(
-            category,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
+    return Obx(() {
+      final isSelected = homeController.selectedCategory.value == category;
+      return GestureDetector(
+        onTap: () => homeController.updateSelectedCategory(category),
+        child: Container(
+          margin: EdgeInsets.only(right: 12.w),
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          decoration: BoxDecoration(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade400),
+          ),
+          child: Center(
+            child: Text(
+              category,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildProductGrid() {
-    // Filter products based on selected category
-    final filteredProducts =
-        selectedCategory == 'All'
-            ? dummyProducts
-            : dummyProducts.where((p) => p['category'] == selectedCategory).toList();
+    return Obx(() {
+      if (homeController.isLoadingProducts.value) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.all(16.w),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              mainAxisExtent: 350.h,
+              crossAxisCount: 2,
+              crossAxisSpacing: 16.w,
+              mainAxisSpacing: 16.h,
+            ),
+            itemCount: 6,
+            itemBuilder:
+                (context, index) =>
+                    Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8.r))),
+          ),
+        );
+      }
 
-    if (filteredProducts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Text('No products found', style: TextStyle(fontSize: 16.sp, color: Colors.black))],
+      final products = homeController.products;
+
+      if (products.isEmpty) {
+        return Container(
+          height: 200.h,
+          child: Center(child: Text('No products found', style: TextStyle(fontSize: 16.sp, color: Colors.black54))),
+        );
+      }
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          mainAxisExtent: 350.h,
+          crossAxisCount: 2,
+          crossAxisSpacing: 16.w,
+          mainAxisSpacing: 16.h,
         ),
+        itemCount: products.length,
+        itemBuilder: (context, index) {
+          return _buildProductCard(products[index]);
+        },
       );
-    }
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.all(16.w),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        mainAxisExtent: 350.h,
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16.w,
-        mainAxisSpacing: 16.h,
-      ),
-      itemCount: filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = filteredProducts[index];
-        return _buildProductCard(product);
-      },
-    );
+    });
   }
 
-  Widget _buildProductCard(Map<String, dynamic> product) {
+  Widget _buildProductCard(Product product) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to product detail if needed
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetailScreen()));
-      },
+      onTap:
+          !product.inStock
+              ? null
+              : () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetailScreen(product: product)));
+              },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8.r),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Image.network(
-                    "https://firebasestorage.googleapis.com/v0/b/dazzle-fashion-ef4c1.firebasestorage.app/o/Asra%20Silk%20Saree%2FSanskriti%20V1111%20%E2%80%93%20Kanjeevaram%20Saree%2FWhatsApp%20Image%202025-05-09%20at%204.07.35%20PM%20(1).jpeg?alt=media&token=c8955ae6-a1a2-4623-a98a-26dcefe7a91b",
-                    fit: BoxFit.fill,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Center(child: CupertinoActivityIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(color: Colors.grey[200], child: const Icon(Icons.error));
-                    },
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(8.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      product['title'],
-                      style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w500),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '₹${product['price'].toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text('MOQ - ${product['pcs']} pcs', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTrendingNewArrivalBanner(String label) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetailScreen()));
-      },
-      child: Container(
-        height: 250.h,
-        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 2)),
+          ],
         ),
         child: Stack(
           children: [
-            // Image with fade overlay
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12.r),
-              child: Image.network(
-                "https://firebasestorage.googleapis.com/v0/b/dazzle-fashion-ef4c1.firebasestorage.app/o/Asra%20Silk%20Saree%2FSanskriti%20V1111%20%E2%80%93%20Kanjeevaram%20Saree%2FWhatsApp%20Image%202025-05-09%20at%204.07.35%20PM%20(1).jpeg?alt=media&token=c8955ae6-a1a2-4623-a98a-26dcefe7a91b",
-                fit: BoxFit.cover,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+                    child: CachedNetworkImage(
+                      imageUrl: product.photo.isNotEmpty ? product.photo : 'https://via.placeholder.com/300',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (context, url) => Center(child: CupertinoActivityIndicator()),
+                      errorWidget: (context, url, error) => Center(child: Icon(Icons.error)),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: EdgeInsets.all(8.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          product.name,
+                          style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w500),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '₹${product.price.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            (product.MOQ != null)
+                                ? Text(
+                                  'MOQ - ${product.MOQ} pcs',
+                                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                                )
+                                : Text('MOQ - 0 pcs', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (!product.inStock)
+              Container(
+                height: 490.h,
                 width: double.infinity,
-                height: double.infinity,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(color: Colors.grey[200], child: const Center(child: CupertinoActivityIndicator()));
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(color: Colors.grey[200], child: const Icon(Icons.error));
-                },
-              ),
-            ),
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.r),
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.white.withOpacity(0.7), Colors.transparent],
-                  stops: const [0.0, 0.5],
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12.r), bottom: Radius.circular(12.r)),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Stock Out',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32.sp,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 5)],
+                        ),
+                      ),
+                      SizedBox(height: 15.h), // Increased spacing for detail screen
+                      Text(
+                        'This item is currently out of stock. Don\'t miss out! We\'ll notify you as soon as it\'s available again. Stay tuned or check back later!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.sp, // Adjusted for detail screen readability
+                          fontWeight: FontWeight.w400,
+                          height: 1.5, // Enhanced line height for better text flow
+                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // Label text
-            Positioned(
-              left: 16.w,
-              bottom: 16.h,
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 4, offset: const Offset(0, 2))],
-                ),
-              ),
-            ),
           ],
         ),
       ),

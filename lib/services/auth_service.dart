@@ -28,11 +28,11 @@ class AuthService extends GetxService {
       currentUser.value = user;
       if (user != null) {
         // await _loadUserData(user.uid);
-        // _navigateToHome();
+        _navigateToHome();
       } else {
         currentUserModel.value = null;
         await SharedPrefsHelper.clearUserData();
-        // _navigateToSignIn();
+        _navigateToSignIn();
       }
     });
 
@@ -98,16 +98,13 @@ class AuthService extends GetxService {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-
       // Create user in Firebase Auth
       log('Creating user with email: ${email.trim()}');
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      log('User created: ${userCredential.user!.uid}');
-
-      // Create user document in Firestore
+      res['user'] = userCredential.user;
       final userModel = UserModel(
         uid: userCredential.user!.uid,
         email: email.trim(),
@@ -117,16 +114,13 @@ class AuthService extends GetxService {
         state: state,
         businessType: businessType,
       );
-
       // Save to Firestore using UID
       log('Writing to Firestore: users/${userCredential.user!.uid}');
       log('UserModel JSON: ${userModel.toJson()}');
       await _firestore.collection('users').doc(userCredential.user!.uid).set(userModel.toJson());
       log('Firestore write completed');
-
       // Update local state
       currentUserModel.value = userModel;
-
       // Save to SharedPreferences
       await SharedPrefsHelper.saveUserData(
         uid: userCredential.user!.uid,
@@ -139,7 +133,6 @@ class AuthService extends GetxService {
         authToken: await userCredential.user!.getIdToken(),
       );
 
-      res['user'] = userCredential.user;
       errorMessage.value = 'User registered successfully!';
       log('User registered successfully: ${userCredential.user!.uid}');
     } on FirebaseAuthException catch (e) {
@@ -168,10 +161,11 @@ class AuthService extends GetxService {
 
       log('Signing in with email: ${email.trim()}');
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+      res['user'] = userCredential.user;
       log('User signed in: ${userCredential.user!.uid}');
 
       // await _loadUserData(userCredential.user!.uid);
-      res['user'] = userCredential.user;
+
       log('User signed in successfully: ${userCredential.user!.uid}');
     } on FirebaseAuthException catch (e) {
       res['error'] = _getAuthErrorMessage(e);

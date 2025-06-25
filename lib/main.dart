@@ -1,10 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
 import 'bindings/app_bindings.dart';
 import 'firebase_options.dart';
 import 'routes/app_pages.dart';
@@ -13,22 +11,9 @@ import 'utils/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Initialize Firebase App Check
-
-  // Configure Firebase Auth
-  await FirebaseAuth.instance.setSettings(
-    appVerificationDisabledForTesting: true, // Only for development
-    phoneNumber: null,
-    smsCode: null,
-  );
-
-  // Initialize services
+  await FirebaseAuth.instance.setSettings(appVerificationDisabledForTesting: true, phoneNumber: null, smsCode: null);
   Get.put(AuthService());
-
   runApp(const MyApp());
 }
 
@@ -68,7 +53,6 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // TODO: Add your app logo here
             const Icon(Icons.shopping_bag, size: 100, color: AppTheme.secondaryColor),
             SizedBox(height: 24.h),
             Text(

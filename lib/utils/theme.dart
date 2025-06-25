@@ -8,7 +8,7 @@ class AppTheme {
   static const Color accentColor = Color(0xFFFF69B4); // Pink
   static const Color backgroundColor = Color(0xFFF9F9F9);
   static const Color buttonTextColor = Color(0xFFFFFFFF);
-  static const Color borderGray = Color(0xFFDDDDDD);
+  static const Color borderGray = Color(0xFF979191);
   static const Color successColor = Color(0xFF4CAF50);
   static const Color dangerColor = Color(0xFFF44336);
   static const Color wpColor = Color(0xFF158E3F);

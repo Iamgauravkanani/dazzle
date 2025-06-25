@@ -1,3 +1,4 @@
+import 'package:dazzle_app/utils/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -14,15 +15,13 @@ class SignInScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Sign In'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Sign In'), centerTitle: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Image.asset(AppAssets.logoPath, height: 200, width: 200),
             SizedBox(height: 24.h),
             _buildTextField(
               controller: _authController.emailController,
@@ -54,10 +53,7 @@ class SignInScreen extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: 16.h),
                   child: Text(
                     _authController.errorMessage.value,
-                    style: TextStyle(
-                      color: AppTheme.dangerColor,
-                      fontSize: 14.sp,
-                    ),
+                    style: TextStyle(color: AppTheme.dangerColor, fontSize: 14.sp),
                   ),
                 );
               }
@@ -66,23 +62,21 @@ class SignInScreen extends StatelessWidget {
             Obx(() {
               return ElevatedButton(
                 onPressed: _authController.isLoading.value ? null : _authController.signIn,
-                child: _authController.isLoading.value
-                    ? SizedBox(
-                        height: 20.h,
-                        width: 20.w,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
-                        ),
-                      )
-                    : const Text('Sign In'),
+                child:
+                    _authController.isLoading.value
+                        ? SizedBox(
+                          height: 20.h,
+                          width: 20.w,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
+                          ),
+                        )
+                        : const Text('Sign In'),
               );
             }),
             SizedBox(height: 16.h),
-            TextButton(
-              onPressed: () => Get.toNamed('/signup'),
-              child: const Text('Don\'t have an account? Sign Up'),
-            ),
+            TextButton(onPressed: () => Get.toNamed('/signup'), child: const Text('Don\'t have an account? Sign Up')),
           ],
         ),
       ),
@@ -103,9 +97,7 @@ class SignInScreen extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.r),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
       ),
     );
   }
@@ -121,10 +113,7 @@ class SignInScreen extends StatelessWidget {
           key: formKey,
           child: TextFormField(
             controller: emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              prefixIcon: Icon(Icons.email),
-            ),
+            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email)),
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -138,10 +127,7 @@ class SignInScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
@@ -156,4 +142,4 @@ class SignInScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

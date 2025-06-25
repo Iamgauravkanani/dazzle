@@ -1,19 +1,13 @@
+import 'package:dazzle_app/controllers/home_controller.dart';
+import 'package:dazzle_app/controllers/order_controller.dart';
+import 'package:dazzle_app/screens/products/product_controller.dart';
 import 'package:get/get.dart';
-
-import '../orders/order_controller.dart';
-import '../products/product_controller.dart';
-import 'home_controller.dart';
 
 class HomeBinding extends Bindings {
   @override
   void dependencies() {
-    // Initialize HomeController
     Get.put(HomeController());
-    
-    // Initialize OrderController
     Get.put(OrderController());
-    
-    // Initialize ProductController
     Get.put(ProductController());
   }
-} 
+}
