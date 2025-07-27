@@ -222,6 +222,17 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           _buildDrawerItem(
+            icon: Icons.info_outline,
+            title: 'Contact Us',
+            fontSize: fontSize,
+            onTap: () async {
+              Navigator.pop(context);
+              if (!await launchUrl(Uri.parse(privacyPolicy))) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link')));
+              }
+            },
+          ),
+          _buildDrawerItem(
             icon: Icons.share,
             title: 'Share App',
             fontSize: fontSize,

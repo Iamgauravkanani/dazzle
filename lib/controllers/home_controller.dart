@@ -6,17 +6,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class HomeController extends GetxController {
   final ProductService _productService = ProductService();
 
-  // --- THIS IS THE LOGIC THAT WAS MISSING ---
   // State for the Bottom Navigation Bar
   final RxInt currentIndex = 0.obs;
-  // ---------------------------------------------
 
   // State for Main Banner Slider
   final RxList<String> bannerImages = <String>[].obs;
   final RxBool isLoadingBanners = false.obs;
 
   // State for Promotional Banners from Firebase Storage
-  final RxString trendingImageUrl = 'Trending Now'.obs;
+  final RxString trendingImageUrl = ''.obs;
   final RxString newArrivalImageUrl = ''.obs;
   final RxBool isLoadingPromoBanners = false.obs;
 
@@ -54,14 +52,12 @@ class HomeController extends GetxController {
     loadProducts(isInitialLoad: true);
   }
 
-  // --- THIS IS THE LOGIC THAT WAS MISSING ---
   /// Updates the current index for the bottom navigation bar.
   void setIndex(int index) {
     if (currentIndex.value != index) {
       currentIndex.value = index;
     }
   }
-  // ---------------------------------------------
 
   /// Fetches the main banner slider images from the 'Banners/' folder in Firebase Storage.
   Future<void> loadBannerImages() async {
@@ -125,29 +121,31 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Fetches a paginated list of products based on the selected category.
-  Future<void> loadProducts({bool isInitialLoad = true, int limit = _pageSize}) async {
-    if (!hasMore.value || (isInitialLoad && isLoadingProducts.value) || (!isInitialLoad && isLoadingMore.value)) return;
+  /// Fetches a paginated list of products based on the selected category and filter type.
+  Future<void> loadProducts({
+    bool isInitialLoad = false,
+    int limit = _pageSize,
+    String? filterType, // "New Arrival" or "Trending Now"
+  }) async {
+    if (isInitialLoad) {
+      isLoadingProducts.value = true;
+      products.clear();
+      lastDocument.value = null;
+      hasMore.value = true;
+    } else {
+      isLoadingMore.value = true;
+    }
+
     try {
-      isLoadingProducts.value = isInitialLoad;
-      isLoadingMore.value = !isInitialLoad;
-      final ProductQueryResult result = await _productService.getProducts(
+      final queryResult = await _productService.getProducts(
         category: selectedCategory.value == 'All' ? null : selectedCategory.value,
-        startAfter: isInitialLoad ? null : lastDocument.value,
+        filterType: filterType,
+        startAfter: lastDocument.value,
         limit: limit,
       );
-      final List<Product> fetchedProducts = result.products;
-      if (fetchedProducts.isEmpty) {
-        hasMore.value = false;
-        return;
-      }
-      if (isInitialLoad) {
-        products.value = fetchedProducts;
-      } else {
-        products.addAll(fetchedProducts.where((p) => !products.any((existing) => existing.id == p.id)));
-      }
-      lastDocument.value = result.lastDocument;
-      hasMore.value = fetchedProducts.length == limit;
+      products.addAll(queryResult.products);
+      lastDocument.value = queryResult.lastDocument;
+      hasMore.value = queryResult.products.length == limit;
     } catch (e) {
       print('Error loading products: $e');
     } finally {
@@ -157,9 +155,9 @@ class HomeController extends GetxController {
   }
 
   /// Loads the next page of products when the user scrolls.
-  void loadMoreProducts() {
+  void loadMoreProducts({String? filterType}) {
     if (!isLoadingMore.value && hasMore.value) {
-      loadProducts(isInitialLoad: false, limit: _pageSize);
+      loadProducts(isInitialLoad: false, limit: _pageSize, filterType: filterType);
     }
   }
 
@@ -167,9 +165,6 @@ class HomeController extends GetxController {
   void updateSelectedCategory(String category) {
     if (selectedCategory.value == category) return;
     selectedCategory.value = category;
-    products.clear();
-    lastDocument.value = null;
-    hasMore.value = true;
     loadProducts(isInitialLoad: true);
   }
 }

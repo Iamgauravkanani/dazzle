@@ -1,18 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dazzle_app/controllers/home_controller.dart';
 import 'package:dazzle_app/models/product_model.dart';
-import 'package:dazzle_app/utils/theme.dart';
+import 'package:dazzle_app/screens/product_detail/product_detail_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-
-import '../product_detail/product_detail_screen.dart';
 
 class TrendingAndArrivalScreen extends StatefulWidget {
-  final String filterType; // "New Arrival" or "Trending Now"
-
+  final String filterType;
   const TrendingAndArrivalScreen({super.key, required this.filterType});
 
   @override
@@ -27,35 +23,29 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Load products based on filter type
-    _loadFilteredProducts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFilteredProducts();
+    });
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    // No state changes needed here. The controller will reset itself on the next initial load.
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
-        !_scrollController.position.outOfRange &&
-        !homeController.isLoadingMore.value) {
-      _loadMoreFilteredProducts();
+        !_scrollController.position.outOfRange) {
+      homeController.loadMoreProducts(filterType: widget.filterType);
     }
   }
 
-  void _loadFilteredProducts() async {
-    homeController.products.clear();
-    homeController.lastDocument.value = null;
-    homeController.hasMore.value = true;
-    await homeController.loadProducts(isInitialLoad: true);
-  }
-
-  void _loadMoreFilteredProducts() async {
-    if (!homeController.isLoadingMore.value && homeController.hasMore.value) {
-      await homeController.loadProducts();
-    }
+  void _loadFilteredProducts() {
+    // This call correctly resets the state and fetches the new filtered list.
+    homeController.loadProducts(isInitialLoad: true, filterType: widget.filterType);
   }
 
   @override
@@ -66,51 +56,22 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
         centerTitle: true,
       ),
       body: Obx(() {
-        final filteredProducts =
-            homeController.products.where((product) {
-              if (widget.filterType == "New Arrival") return product.isNewArrival;
-              if (widget.filterType == "Trending Now") return product.isNewTrending;
-              return false; // Default case (should not happen)
-            }).toList();
-
-        if (homeController.isLoadingProducts.value) {
-          return Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.all(16.w),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                mainAxisExtent: 350.h,
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.w,
-                mainAxisSpacing: 16.h,
-              ),
-              itemCount: 6,
-              itemBuilder:
-                  (context, index) => Container(
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8.r)),
-                  ),
-            ),
-          );
+        // This logic is now safe. It will show a loader on first entry.
+        if (homeController.isLoadingProducts.value && homeController.products.isEmpty) {
+          return const Center(child: CupertinoActivityIndicator(radius: 18));
         }
 
-        if (filteredProducts.isEmpty) {
-          return Container(
-            height: 200.h,
-            child: Center(
-              child: Text(
-                'No ${widget.filterType.toLowerCase()} products found',
-                style: TextStyle(fontSize: 16.sp, color: Colors.black54),
-              ),
+        if (homeController.products.isEmpty) {
+          return Center(
+            child: Text(
+              'No products currently in ${widget.filterType}',
+              style: TextStyle(fontSize: 16.sp, color: Colors.black54),
             ),
           );
         }
 
         return GridView.builder(
           controller: _scrollController,
-          shrinkWrap: true,
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -119,9 +80,9 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
             crossAxisSpacing: 16.w,
             mainAxisSpacing: 16.h,
           ),
-          itemCount: filteredProducts.length,
+          itemCount: homeController.products.length,
           itemBuilder: (context, index) {
-            return _buildProductCard(filteredProducts[index]);
+            return _buildProductCard(homeController.products[index]);
           },
         );
       }),
@@ -137,7 +98,9 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
     );
   }
 
+  // Your _buildProductCard widget remains the same.
   Widget _buildProductCard(Product product) {
+    // ...
     return GestureDetector(
       onTap:
           !product.inStock
@@ -166,8 +129,8 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
                       imageUrl: product.photo.isNotEmpty ? product.photo : 'https://via.placeholder.com/300',
                       fit: BoxFit.cover,
                       width: double.infinity,
-                      placeholder: (context, url) => Center(child: CupertinoActivityIndicator()),
-                      errorWidget: (context, url, error) => Center(child: Icon(Icons.error)),
+                      placeholder: (context, url) => const Center(child: CupertinoActivityIndicator()),
+                      errorWidget: (context, url, error) => const Center(child: Icon(Icons.error)),
                     ),
                   ),
                 ),
@@ -197,12 +160,10 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
                               ),
                             ),
                             SizedBox(height: 4.h),
-                            (product.MOQ != null)
-                                ? Text(
-                                  'MOQ - ${product.MOQ} pcs',
-                                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
-                                )
-                                : Text('MOQ - 0 pcs', style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+                            Text(
+                              'MOQ - ${product.MOQ ?? 0} pcs',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                            ),
                           ],
                         ),
                       ],
@@ -213,8 +174,6 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
             ),
             if (!product.inStock)
               Container(
-                height: double.infinity,
-                width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(12.r),
@@ -225,24 +184,7 @@ class _TrendingAndArrivalScreenState extends State<TrendingAndArrivalScreen> {
                     children: [
                       Text(
                         'Stock Out',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 5)],
-                        ),
-                      ),
-                      SizedBox(height: 10.h),
-                      Text(
-                        'This item is currently out of stock. Don\'t miss out! We\'ll notify you as soon as it\'s available again. Stay tuned or check back later!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w400,
-                          height: 1.3,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 22.sp, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Product {
+  // All your existing fields...
   final String productNumber;
   final String productType;
   final double rating;
@@ -35,10 +36,12 @@ class Product {
   final String photo;
   final String placeOfOrigin;
   final double price;
-  final dynamic MOQ; // Added MOQ parameter
-  final bool isNewArrival; // Added new parameter
-  final bool isNewTrending; // Added new parameter
-  final bool inStock; // Added new parameter with default true
+  final dynamic MOQ;
+  final bool inStock;
+
+  // ***** KEY VARIABLES *****
+  final bool isNewArrival; // Mapped from 'isNA'
+  final bool isNewTrending; // Mapped from 'isTN'
 
   Product({
     required this.productNumber,
@@ -75,14 +78,15 @@ class Product {
     required this.photo,
     required this.placeOfOrigin,
     required this.price,
-    this.MOQ, // Initialize MOQ
-    this.isNewArrival = false, // Default to false
-    this.isNewTrending = false, // Default to false
-    this.inStock = true, // Default to true
+    this.MOQ,
+    required this.inStock,
+    required this.isNewArrival,
+    required this.isNewTrending,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
+      // Mapping all your existing fields...
       productNumber: map['productNumber'] ?? '',
       productType: map['productType'] ?? '',
       rating: (map['rating'] ?? 0.0).toDouble(),
@@ -108,7 +112,7 @@ class Product {
       fabric: map['fabric'] ?? '',
       fullCatalogPrice: (map['fullCatalogPrice'] ?? 0.0).toDouble(),
       gender: map['gender'] ?? '',
-      id: map['id'] ?? '',
+      id: map['id'] ?? '', // IMPORTANT: ensure 'id' is in the map from the service
       imageUrls: map['imageUrls'] ?? [],
       isActive: map['isActive'] ?? false,
       material: map['material'] ?? '',
@@ -117,53 +121,13 @@ class Product {
       photo: map['photo'] ?? '',
       placeOfOrigin: map['placeOfOrigin'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
-      MOQ: map['MOQ'], // Assigning MOQ from the map
-      isNewArrival: map['isNewArrival'] ?? false, // Assign from map with default false
-      isNewTrending: map['isNewTrending'] ?? false, // Assign from map with default false
-      inStock: map['inStock'] ?? true, // Assign from map with default true
-    );
-  }
+      MOQ: map['MOQ'],
+      inStock: map['inStock'] ?? true,
 
-  Map<String, dynamic> toMap() {
-    return {
-      'productNumber': productNumber,
-      'productType': productType,
-      'rating': rating,
-      'reviewCount': reviewCount,
-      'sales': sales,
-      'season': season,
-      'sizes': sizes,
-      'tags': tags,
-      'type': type,
-      'updatedAt': updatedAt,
-      'views': views,
-      'weight': weight,
-      'work': work,
-      'allProductPics': allProductPics,
-      'availableQuantity': availableQuantity,
-      'brandName': brandName,
-      'category': category,
-      'clothingType': clothingType,
-      'colors': colors,
-      'createdAt': createdAt,
-      'description': description,
-      'design': design,
-      'fabric': fabric,
-      'fullCatalogPrice': fullCatalogPrice,
-      'gender': gender,
-      'id': id,
-      'imageUrls': imageUrls,
-      'isActive': isActive,
-      'material': material,
-      'name': name,
-      'occasion': occasion,
-      'photo': photo,
-      'placeOfOrigin': placeOfOrigin,
-      'price': price,
-      'MOQ': MOQ,
-      'isNewArrival': isNewArrival,
-      'isNewTrending': isNewTrending,
-      'inStock': inStock, // Adding to map
-    };
+      // ***** THIS LOGIC IS PERFECT *****
+      // It safely handles missing fields by defaulting to false.
+      isNewArrival: map['isNA'] ?? false,
+      isNewTrending: map['isTN'] ?? false,
+    );
   }
 }

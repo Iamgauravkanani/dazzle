@@ -9,57 +9,25 @@ class SignUpScreen extends StatelessWidget {
   SignUpScreen({super.key});
 
   final AuthController _authController = Get.put(AuthController());
-
   final List<String> _businessTypes = ['Retail', 'Wholesaler'];
-  final List<String> _states = [
-    'Andhra Pradesh',
-    'Arunachal Pradesh',
-    'Assam',
-    'Bihar',
-    'Chhattisgarh',
-    'Goa',
-    'Gujarat',
-    'Haryana',
-    'Himachal Pradesh',
-    'Jharkhand',
-    'Karnataka',
-    'Kerala',
-    'Madhya Pradesh',
-    'Maharashtra',
-    'Manipur',
-    'Meghalaya',
-    'Mizoram',
-    'Nagaland',
-    'Odisha',
-    'Punjab',
-    'Rajasthan',
-    'Sikkim',
-    'Tamil Nadu',
-    'Telangana',
-    'Tripura',
-    'Uttar Pradesh',
-    'Uttarakhand',
-    'West Bengal',
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Sign Up'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Sign Up'), centerTitle: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(height: 24.h),
+            _buildTextField(controller: _authController.firstNameController, label: 'First Name', icon: Icons.person),
+            SizedBox(height: 16.h),
             _buildTextField(
-              controller: _authController.firstNameController,
-              label: 'First Name',
-              icon: Icons.person,
+              controller: _authController.lastNameController,
+              label: 'Last Name',
+              icon: Icons.person_outline,
             ),
             SizedBox(height: 16.h),
             _buildTextField(
@@ -82,18 +50,9 @@ class SignUpScreen extends StatelessWidget {
               icon: Icons.business,
             ),
             SizedBox(height: 16.h),
-            _buildDropdownField(
-              controller: _authController.stateController,
-              label: 'State',
-              icon: Icons.location_city,
-              items: _states,
-            ),
+            _buildStateDropdownField(), // <-- UPDATED WIDGET
             SizedBox(height: 16.h),
-            _buildTextField(
-              controller: _authController.cityController,
-              label: 'City',
-              icon: Icons.location_on,
-            ),
+            _buildCityDropdownField(), // <-- UPDATED WIDGET
             SizedBox(height: 16.h),
             _buildDropdownField(
               controller: _authController.businessTypeController,
@@ -108,10 +67,7 @@ class SignUpScreen extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: 16.h),
                   child: Text(
                     _authController.errorMessage.value,
-                    style: TextStyle(
-                      color: AppTheme.dangerColor,
-                      fontSize: 14.sp,
-                    ),
+                    style: TextStyle(color: AppTheme.dangerColor, fontSize: 14.sp),
                   ),
                 );
               }
@@ -120,29 +76,28 @@ class SignUpScreen extends StatelessWidget {
             Obx(() {
               return ElevatedButton(
                 onPressed: _authController.isLoading.value ? null : _authController.signUp,
-                child: _authController.isLoading.value
-                    ? SizedBox(
-                        height: 20.h,
-                        width: 20.w,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
-                        ),
-                      )
-                    : const Text('Sign Up'),
+                child:
+                    _authController.isLoading.value
+                        ? SizedBox(
+                          height: 20.h,
+                          width: 20.w,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
+                          ),
+                        )
+                        : const Text('Sign Up'),
               );
             }),
             SizedBox(height: 16.h),
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Already have an account? Sign In'),
-            ),
+            TextButton(onPressed: () => Get.back(), child: const Text('Already have an account? Sign In')),
           ],
         ),
       ),
     );
   }
 
+  // Helper for text fields (unchanged)
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -157,34 +112,66 @@ class SignUpScreen extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.r),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
       ),
     );
   }
 
+  Widget _buildStateDropdownField() {
+    return Obx(
+      () => DropdownButtonFormField<String>(
+        // VALUE now directly binds to the reactive variable
+        value: _authController.selectedState.value,
+        hint: const Text('State'), // A hint is good practice
+        decoration: InputDecoration(/* ... */),
+        items:
+            _authController.states.map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+        // ONCHANGED now directly updates the reactive variable
+        onChanged: _authController.onStateChanged,
+      ),
+    );
+  }
+
+  Widget _buildCityDropdownField() {
+    return Obx(
+      () => DropdownButtonFormField<String>(
+        // VALUE now directly binds to the reactive variable
+        value: _authController.selectedCity.value,
+        hint: const Text('City'),
+        decoration: InputDecoration(/* ... */),
+        items:
+            _authController.cities.map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+        // ONCHANGED now directly updates the reactive variable
+        onChanged: (String? newValue) {
+          _authController.selectedCity.value = newValue;
+        },
+      ),
+    );
+  }
+
+  // Generic dropdown helper (unchanged)
   Widget _buildDropdownField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     required List<String> items,
   }) {
+    // This could also be improved to not use a controller, but it's fine for now.
     return DropdownButtonFormField<String>(
       value: controller.text.isEmpty ? null : controller.text,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.r),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
       ),
-      items: items.map((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
-        );
-      }).toList(),
+      items:
+          items.map((String value) {
+            return DropdownMenuItem<String>(value: value, child: Text(value));
+          }).toList(),
       onChanged: (String? newValue) {
         if (newValue != null) {
           controller.text = newValue;
@@ -192,4 +179,4 @@ class SignUpScreen extends StatelessWidget {
       },
     );
   }
-} 
+}

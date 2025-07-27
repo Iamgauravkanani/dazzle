@@ -14,3 +14,19 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+received_orders
+└── <user_uid> (document)
+├── userData: { name, phone, addressLine1, addressLine2, city, state, postalCode, updatedAt }
+└── orders (subcollection)
+└── <user_uid_timestamp> (document)
+├── userId
+├── items: [
+│     { productId, productNumber, name, photo, price, quantity, moq, weight }
+│   ]
+├── subtotal
+├── deliveryCharge
+├── gst
+├── totalAmount
+├── createdAt
+├── status

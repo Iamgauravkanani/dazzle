@@ -89,6 +89,7 @@ class AuthService extends GetxService {
     required String email,
     required String password,
     required String firstName,
+    required String lastName, // <-- This was already here, which is great
     required String businessName,
     required String city,
     required String state,
@@ -98,34 +99,42 @@ class AuthService extends GetxService {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-      // Create user in Firebase Auth
+
       log('Creating user with email: ${email.trim()}');
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
       res['user'] = userCredential.user;
+
+      // --- CHANGE IS HERE ---
+      // Instantiate UserModel with the new lastName field
       final userModel = UserModel(
         uid: userCredential.user!.uid,
         email: email.trim(),
         firstName: firstName,
+        lastName: lastName, // <-- ADDED
         businessName: businessName,
         city: city,
         state: state,
         businessType: businessType,
       );
-      // Save to Firestore using UID
+
       log('Writing to Firestore: users/${userCredential.user!.uid}');
       log('UserModel JSON: ${userModel.toJson()}');
       await _firestore.collection('users').doc(userCredential.user!.uid).set(userModel.toJson());
       log('Firestore write completed');
-      // Update local state
+
       currentUserModel.value = userModel;
-      // Save to SharedPreferences
+
+      // --- CHANGE IS HERE ---
+      // Save lastName to SharedPreferences as well
+      // NOTE: Ensure your SharedPrefsHelper.saveUserData method can accept `lastName`.
       await SharedPrefsHelper.saveUserData(
         uid: userCredential.user!.uid,
         email: email.trim(),
         firstName: firstName,
+        lastName: lastName, // <-- ADDED
         businessName: businessName,
         city: city,
         state: state,
@@ -219,6 +228,7 @@ class AuthService extends GetxService {
 
   Future<void> updateUserProfile({
     String? firstName,
+    String? lastName, // <-- ADDED
     String? businessName,
     String? city,
     String? state,
@@ -232,6 +242,7 @@ class AuthService extends GetxService {
 
       final updates = <String, dynamic>{};
       if (firstName != null) updates['firstName'] = firstName;
+      if (lastName != null) updates['lastName'] = lastName; // <-- ADDED
       if (businessName != null) updates['businessName'] = businessName;
       if (city != null) updates['city'] = city;
       if (state != null) updates['state'] = state;

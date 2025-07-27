@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dazzle_app/controllers/cart_controller.dart';
+import 'package:dazzle_app/screens/checkout/checkoutscreen.dart';
 import 'package:dazzle_app/utils/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -183,6 +184,7 @@ class CartTab extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                Get.to(() => const CheckoutScreen());
                 Get.snackbar('Checkout', 'Proceeding to checkout...', snackPosition: SnackPosition.BOTTOM);
               },
               style: ElevatedButton.styleFrom(
